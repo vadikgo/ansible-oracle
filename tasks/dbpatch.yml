@@ -30,7 +30,7 @@
   when: gen_rsp_file | success
 
 - name: apply latest patch rdbms
-  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+  command: "{{ oracle_tmp }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
   args:
