@@ -46,23 +46,6 @@
     - ksh
 
 #
-# unpack the oracle installers
-#
-- file: name={{oracle_tmp}} state=directory
-- name: check if oracle has already been unzipped
-  stat: path={{ oracle_tmp }}/database
-  register: oracle_unzip
-
-- name: unzip installer
-  unarchive:
-    src: "{{ oracle_installer_uri }}/{{ item }}"
-    dest: "{{ oracle_tmp }}"
-    copy: no
-    creates:
-  with_items: "{{oracle_installer}}"
-  when: oracle_unzip.stat.exists == False
-
-#
 # config system files for oracle
 #
 
@@ -141,6 +124,24 @@
     shell: /bin/bash
     password: "{{ oracle_pass }}"
     append: yes
+
+#
+# unpack the oracle installers
+#
+- file: name={{oracle_tmp}} state=directory
+- name: check if oracle has already been unzipped
+  stat: path={{ oracle_tmp }}/database
+  register: oracle_unzip
+
+- name: unzip installer
+  unarchive:
+    src: "{{ oracle_installer_uri }}/{{ item }}"
+    dest: "{{ oracle_tmp }}"
+    copy: no
+    creates:
+    owner: "{{ oracle_user }}"
+  with_items: "{{oracle_installer}}"
+  when: oracle_unzip.stat.exists == False
 
 - name: create the oracle installation path
   file:
@@ -232,3 +233,5 @@
   become_user: "{{ oracle_user }}"
   environment: "{{ora_user_env}}"
   command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
+
+- include: tasks/dbpatch.yml

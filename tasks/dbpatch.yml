@@ -1,0 +1,38 @@
+---
+# Install latest patch for Oracle
+- name: unzip patch
+  unarchive:
+    src: "{{ oracle_installer_uri }}/{{ oracle_latest_patch }}"
+    dest: "{{ oracle_tmp }}"
+    copy: no
+    creates: "{{ oracle_tmp }}/{{oracle_patch_num}}"
+    owner: "{{ oracle_user }}"
+
+- name: unzip opatch
+  unarchive:
+    src: "{{ oracle_installer_uri }}/{{ oracle_opatch }}"
+    dest: "{{ oracle_tmp }}"
+    copy: no
+    creates: "{{ oracle_tmp }}/OPatch"
+    owner: "{{ oracle_user }}"
+
+- name: generate response response file
+  shell: "echo ''| {{ oracle_tmp }}/OPatch/ocm/bin/emocmrsp -output ./ocm.rsp foo bar"
+  become_user: "{{ oracle_user }}"
+  environment: "{{ ora_user_env }}"
+  args:
+      chdir: "{{ ora_user_env.ORACLE_HOME }}"
+      creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+  register: gen_rsp_file
+
+- name: Stop oracle service
+  service: name=oracle state=stopped
+  when: gen_rsp_file | success
+
+- name: apply latest patch rdbms
+  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+  environment: "{{ ora_user_env }}"
+  become_user: "{{ oracle_user }}"
+  args:
+      chdir: "{{ oracle_tmp }}/{{ oracle_patch_num }}"
+  when: gen_rsp_file | success

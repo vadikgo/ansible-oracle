@@ -65,3 +65,7 @@ oracle_installer_uri: http://oracle.installer.host
 # - if you've already extracted everything, set the vars below to false. your
 #   extracted installer directory should be {{ oracle_tmp }}/database.
 oracle_installer: [p13390677_112040_Linux-x86-64_1of7.zip, p13390677_112040_Linux-x86-64_2of7.zip]
+
+oracle_latest_patch: patch/p21555791_112040_Linux-x86-64.zip
+oracle_patch_num: 21555791
+oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
