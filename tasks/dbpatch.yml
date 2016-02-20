@@ -1,16 +1,22 @@
 ---
 # Install latest patch for Oracle
+- name: download oracle patch
+  get_url: url={{ oracle_installer_uri }}/{{ oracle_latest_patch }} dest={{ oracle_tmp }}/{{ oracle_latest_patch }} checksum={{oracle_latest_patch_checksum}}
+
 - name: unzip patch
   unarchive:
-    src: "{{ oracle_installer_uri }}/{{ oracle_latest_patch }}"
+    src: "{{ oracle_tmp }}/{{ oracle_latest_patch }}"
     dest: "{{ oracle_tmp }}"
     copy: no
     creates: "{{ oracle_tmp }}/{{oracle_patch_num}}"
     owner: "{{ oracle_user }}"
 
+- name: download oracle opatch
+  get_url: url={{ oracle_installer_uri }}/{{ oracle_opatch }} dest={{ oracle_tmp }}/{{ oracle_opatch }} checksum={{oracle_opatch_checksum}}
+
 - name: unzip opatch
   unarchive:
-    src: "{{ oracle_installer_uri }}/{{ oracle_opatch }}"
+    src: "{{ oracle_tmp }}/{{ oracle_opatch }}"
     dest: "{{ oracle_tmp }}"
     copy: no
     creates: "{{ oracle_tmp }}/OPatch"

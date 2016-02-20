@@ -67,5 +67,7 @@ oracle_installer_uri: http://oracle.installer.host
 oracle_installer: [p13390677_112040_Linux-x86-64_1of7.zip, p13390677_112040_Linux-x86-64_2of7.zip]
 
 oracle_latest_patch: patch/p21555791_112040_Linux-x86-64.zip
+oracle_latest_patch_checksum: sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c
 oracle_patch_num: 21555791
 oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
+oracle_opatch_checksum: sha256:b5bb9d8014a0f9b1d61e21e796d78dccdf1352f23cd32812f4850b878ae4944c
