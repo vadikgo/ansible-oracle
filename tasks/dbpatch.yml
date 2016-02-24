@@ -1,26 +1,27 @@
 ---
 # Install latest patch for Oracle
-- name: download oracle patch
-  get_url: url={{ oracle_installer_uri }}/{{ oracle_latest_patch }} dest={{ oracle_tmp }}/{{ oracle_latest_patch }} checksum={{oracle_latest_patch_checksum}}
-
-- name: unzip patch
+- name: unzip patches
   unarchive:
-    src: "{{ oracle_tmp }}/{{ oracle_latest_patch }}"
+    src: "{{ oracle_installer_uri }}/{{ item.file_name }}"
     dest: "{{ oracle_tmp }}"
     copy: no
-    creates: "{{ oracle_tmp }}/{{oracle_patch_num}}"
+    creates: "{{ oracle_tmp }}/{{ item.number }}"
     owner: "{{ oracle_user }}"
+  with_items: "{{oracle_latest_patches}}"
 
-- name: download oracle opatch
-  get_url: url={{ oracle_installer_uri }}/{{ oracle_opatch }} dest={{ oracle_tmp }}/{{ oracle_opatch }} checksum={{oracle_opatch_checksum}}
+- name: get opatch version
+  command: "{{ora_user_env.ORACLE_HOME}}/OPatch/opatch version"
+  become_user: "{{ oracle_user }}"
+  environment: "{{ ora_user_env }}"
+  register: opatch_version
 
 - name: unzip opatch
   unarchive:
-    src: "{{ oracle_tmp }}/{{ oracle_opatch }}"
-    dest: "{{ oracle_tmp }}"
+    src: "{{ oracle_installer_uri }}/{{ oracle_opatch }}"
+    dest: "{{ ora_user_env.ORACLE_HOME }}"
     copy: no
-    creates: "{{ oracle_tmp }}/OPatch"
     owner: "{{ oracle_user }}"
+  when: opatch_version.stdout.find(oracle_opatch_version) == -1
 
 - name: generate response response file
   shell: "echo ''| {{ oracle_tmp }}/OPatch/ocm/bin/emocmrsp -output ./ocm.rsp foo bar"
@@ -31,14 +32,19 @@
       creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
   register: gen_rsp_file
 
+- name: get patch list
+  command: cat {{ ora_user_env.ORACLE_HOME }}/.patch_storage/interim_inventory.txt
+  register: patch_list
+
 - name: Stop oracle service
   service: name=oracle state=stopped
   when: gen_rsp_file | success
 
 - name: apply latest patch rdbms
-  command: "{{ oracle_tmp }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
   args:
-      chdir: "{{ oracle_tmp }}/{{ oracle_patch_num }}"
+      chdir: "{{ oracle_tmp }}/{{ item.number }}"
   when: gen_rsp_file | success
+  with_items: "{{oracle_latest_patches}}"

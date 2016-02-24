@@ -26,24 +26,34 @@
     - unixODBC-devel
     - unixODBC-devel*x86_64
     - unixODBC-*x86_64
-    - compat-libstdc++-33
     - compat-libstdc++-296
     - compat-libstdc*x86_64
-    - compat-libcap*
     - compat-glibc-2*
     - elfutils-devel*x86_64
     - glibc-*
-    - gcc-c++*x86_64
-    - libaio
-    - libaio-devel
-    - libaio-devel*x86_64
     - libtool-ltdl*x86_64
     - readline
     - libcap*x86_64
     - libattr*x86_64
-    - sysstat
-  # - pdksh # skip this because it's bad and we're getting ksh already
+    - glibc-devel.i686
+    - binutils
+    - compat-libcap1
+    - compat-libstdc++-33
+    - gcc
+    - gcc-c++
+    - glibc
+    - glibc-devel
     - ksh
+    - libgcc
+    - libstdc++
+    - libstdc++-devel
+    - libaio
+    - libaio-devel
+    - make
+    - sysstat
+    - bind-libs
+    - bind-utils
+    
 
 #
 # config system files for oracle
@@ -101,6 +111,7 @@
 
 - name: disable setenforce # because oracle says so, that's why
   command: /usr/sbin/setenforce 0
+  ignore_errors: yes
 
 - name: oracle-recommended selinux
   selinux: policy=targeted state=disabled
