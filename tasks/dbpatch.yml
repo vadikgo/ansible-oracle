@@ -1,11 +1,15 @@
 ---
 # Install latest patch for Oracle
+
+- file: name={{ oracle_tmp }}/{{ item.number }} state=directory owner={{ oracle_user }}
+  with_items: "{{oracle_latest_patches}}"
+
 - name: unzip patches
   unarchive:
     src: "{{ oracle_installer_uri }}/{{ item.file_name }}"
-    dest: "{{ oracle_tmp }}"
+    dest: "{{ oracle_tmp }}/{{ item.number }}"
     copy: no
-    creates: "{{ oracle_tmp }}/{{ item.number }}"
+    creates: "{{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
     owner: "{{ oracle_user }}"
   with_items: "{{oracle_latest_patches}}"
 
@@ -30,21 +34,18 @@
   args:
       chdir: "{{ ora_user_env.ORACLE_HOME }}"
       creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
-  register: gen_rsp_file
 
 - name: get patch list
-  command: cat {{ ora_user_env.ORACLE_HOME }}/.patch_storage/interim_inventory.txt
-  register: patch_list
-
-- name: Stop oracle service
-  service: name=oracle state=stopped
-  when: gen_rsp_file | success
-
-- name: apply latest patch rdbms
-  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+  shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |grep ^Patch"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
-  args:
-      chdir: "{{ oracle_tmp }}/{{ item.number }}"
-  when: gen_rsp_file | success
+  register: patch_list
+
+- name: apply latest patch rdbms
+  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
+  environment: "{{ ora_user_env }}"
+  become_user: "{{ oracle_user }}"
+  when: patch_list.stdout.find(item.number) == -1
   with_items: "{{oracle_latest_patches}}"
+  notify:
+      - stop oracle

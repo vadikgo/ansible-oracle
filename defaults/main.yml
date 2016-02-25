@@ -66,8 +66,9 @@ oracle_installer_uri: http://oracle.installer.host
 #   extracted installer directory should be {{ oracle_tmp }}/database.
 oracle_installer: [p13390677_112040_Linux-x86-64_1of7.zip, p13390677_112040_Linux-x86-64_2of7.zip]
 oracle_latest_patches:
-    - { file_name: p21948347_112040_Linux-x86-64.zip, number: 21948347 }
-    - { file_name: p21972320_112040_Linux-x86-64.zip, number: 21972320 }
-    - { file_name: p22139245_112040_Linux-x86-64.zip, number: 22139245 }
-oracle_opatch: p6880880_112000_Linux-x86-64.zip
+    - { file_name: patch/p17478514_112040_Linux-x86-64.zip, number: "17478514" }
+    #- { file_name: patch/p21948347_112040_Linux-x86-64.zip, number: "21948347" }
+    #- { file_name: patch/p21972320_112040_Linux-x86-64.zip, number: "21972320" }
+    #- { file_name: patch/p22139245_112040_Linux-x86-64.zip, number: "22139245" }
+oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
 oracle_opatch_version: 11.2.0.3.12

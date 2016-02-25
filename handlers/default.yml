@@ -1,0 +1,13 @@
+---
+
+- name: stop oracle
+  service: name=oracle state=stopped
+
+- name: start oracle
+  service: name=oracle state=started enabled=yes
+
+- name: stop enterprise manager web console
+  become_user: "{{ oracle_user }}"
+  environment: "{{ora_user_env}}"
+  command: "{{ ora_user_env.ORACLE_HOME }}/bin/emctl stop dbconsole"
+  ignore_errors: yes
