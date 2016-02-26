@@ -28,7 +28,7 @@
   when: opatch_version.stdout.find(oracle_opatch_version) == -1
 
 - name: generate response response file
-  shell: "echo ''| {{ oracle_tmp }}/OPatch/ocm/bin/emocmrsp -output ./ocm.rsp foo bar"
+  shell: "echo ''| {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output ./ocm.rsp foo bar"
   become_user: "{{ oracle_user }}"
   environment: "{{ ora_user_env }}"
   args:
@@ -36,10 +36,18 @@
       creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
 
 - name: get patch list
-  shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |grep ^Patch"
+  shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |grep -e 'Database Patch Set Update' -e ^Patch"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
   register: patch_list
+  failed_when: patch_list.rc not in [0, 1]
+
+- name: stop oracle
+  service: name=oracle state=stopped
+  #notify
+  # - stop oracle
+  when: patch_list.stdout.find(item.number) == -1
+  with_items: "{{oracle_latest_patches}}"
 
 - name: apply latest patch rdbms
   command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
@@ -48,4 +56,4 @@
   when: patch_list.stdout.find(item.number) == -1
   with_items: "{{oracle_latest_patches}}"
   notify:
-      - stop oracle
+      - start oracle

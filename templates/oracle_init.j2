@@ -13,46 +13,42 @@
 
 . /etc/rc.d/init.d/functions
 
-LOCKFILE=/var/lock/subsys/oracle
+#LOCKFILE=/var/lock/subsys/oracle
 ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}
 ORACLE_USER={{ oracle_user }}
+ORACLE_SID={{ ora_user_env.ORACLE_SID }}
 
 case "$1" in
 'start')
-   if [ -f $LOCKFILE ]; then
-      echo $0 already running.
-      exit 1
-   fi
-   echo -n $"Starting Oracle Database:"
-   su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl start"
-   su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
-   su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl start dbconsole"
-   touch $LOCKFILE
+   $0 status|grep -q stopped && {
+       echo -n $"Starting Oracle Database:"
+       su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl start"
+       su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
+       su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl start dbconsole"
+   }
    ;;
 'stop')
-   if [ ! -f $LOCKFILE ]; then
-      echo $0 already stopping.
-      exit 1
-   fi
-   echo -n $"Stopping Oracle Database:"
-   su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl stop"
-   su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
-   su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl stop dbconsole"
-   rm -f $LOCKFILE
+    $0 status|grep -q started && {
+       echo -n $"Stopping Oracle Database:"
+       su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl stop"
+       su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
+       su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl stop dbconsole"
+   }
    ;;
 'restart')
    $0 stop
    $0 start
    ;;
 'status')
-   if [ -f $LOCKFILE ]; then
-      echo $0 started.
-      else
-      echo $0 stopped.
-   fi
+    pmon=`ps -ef | grep -w "ora_pmon_$ORACLE_SID"  | grep -v grep`
+    if [ "$pmon" != "" ] ; then
+        echo $0 started.
+    else
+        echo $0 stopped.
+    fi
    ;;
 *)
-   echo "Usage: $0 [start|stop|status]"
+   echo "Usage: $0 [start|stop|restart|status]"
    exit 1
 esac
 

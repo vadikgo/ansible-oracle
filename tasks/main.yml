@@ -204,9 +204,8 @@
   failed_when: install_result.rc not in [0, 6]
   register: install_result
   when: not oracle_installed.stat.exists
-  notify:
-      - stop enterprise manager web console
-      - start oracle
+  #notify:
+  #  - start oracle
 
 - name: general oracle post-installation
   command: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
@@ -226,8 +225,9 @@
 - name: compose the oracle init.d script
   template: src=oracle_init.j2 dest=/etc/init.d/oracle mode=0755
 
-#- name: register and start up the oracle service
-#  service: name=oracle state=restarted enabled=yes
+- name: register and start up the oracle service
+  service: name=oracle state=started enabled=yes
+  when: not oracle_installed.stat.exists
 
 - name: compose the oracle user creation script
   template:
@@ -236,10 +236,12 @@
     mode: 0755
     owner: "{{ oracle_user }}"
     group: "{{ oracle_group }}"
+  when: not oracle_installed.stat.exists
 
 - name: create the oracle db user
   become_user: "{{ oracle_user }}"
   environment: "{{ora_user_env}}"
   command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
+  when: not oracle_installed.stat.exists
 
 - include: tasks/dbpatch.yml
