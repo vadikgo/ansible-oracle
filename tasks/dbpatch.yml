@@ -36,7 +36,7 @@
       creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
 
 - name: get patch list
-  shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |grep -e 'Database Patch Set Update' -e ^Patch"
+  shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |egrep '[0-9]{8,}'"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
   register: patch_list
@@ -44,16 +44,15 @@
 
 - name: stop oracle
   service: name=oracle state=stopped
-  #notify
-  # - stop oracle
   when: patch_list.stdout.find(item.number) == -1
   with_items: "{{oracle_latest_patches}}"
 
 - name: apply latest patch rdbms
-  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch apply -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
+  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
   when: patch_list.stdout.find(item.number) == -1
   with_items: "{{oracle_latest_patches}}"
-  notify:
-      - start oracle
+
+- name: register and start up the oracle service
+  service: name=oracle state=started enabled=yes

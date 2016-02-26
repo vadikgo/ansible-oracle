@@ -204,8 +204,6 @@
   failed_when: install_result.rc not in [0, 6]
   register: install_result
   when: not oracle_installed.stat.exists
-  #notify:
-  #  - start oracle
 
 - name: general oracle post-installation
   command: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
