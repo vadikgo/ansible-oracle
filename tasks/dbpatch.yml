@@ -48,7 +48,7 @@
   with_items: "{{oracle_latest_patches}}"
 
 - name: apply latest patch rdbms
-  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
+  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply | default('apply')}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
   environment: "{{ ora_user_env }}"
   become_user: "{{ oracle_user }}"
   when: patch_list.stdout.find(item.number) == -1
