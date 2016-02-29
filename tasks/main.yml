@@ -197,23 +197,42 @@
     owner: "{{ oracle_user }}"
     group: "{{ oracle_group }}"
 
-- name: install oracle
-  become: yes
-  become_user: "{{ oracle_user }}"
-  environment: "{{ora_user_env}}"
-  command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -responseFile {{ oracle_tmp }}/db_install.rsp"
-  args:
-      creates: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
-  failed_when: install_result.rc not in [0, 6]
-  register: install_result
-  when: not oracle_installed.stat.exists
+- name: compose the oracle init.d script
+  template: src=oracle_init.j2 dest=/etc/init.d/oracle mode=0755
 
-- name: general oracle post-installation
-  command: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
-  when: not oracle_installed.stat.exists
+- block:
+    - name: install oracle
+      become: yes
+      become_user: "{{ oracle_user }}"
+      environment: "{{ora_user_env}}"
+      command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -responseFile {{ oracle_tmp }}/db_install.rsp"
+      args:
+          creates: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
+      failed_when: install_result.rc not in [0, 6]
+      register: install_result
 
-- name: db-specific oracle post-installation
-  command: "{{ ora_user_env.ORACLE_HOME }}/root.sh"
+    - name: general oracle post-installation
+      command: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
+
+    - name: db-specific oracle post-installation
+      command: "{{ ora_user_env.ORACLE_HOME }}/root.sh"
+
+    - name: register and start up the oracle service
+      service: name=oracle state=started enabled=yes
+
+    - name: compose the oracle user creation script
+      template:
+        src: sqlplus_user_setup.sh.j2
+        dest: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
+        mode: 0755
+        owner: "{{ oracle_user }}"
+        group: "{{ oracle_group }}"
+
+    - name: create the oracle db user
+      become: yes
+      become_user: "{{ oracle_user }}"
+      environment: "{{ora_user_env}}"
+      command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
   when: not oracle_installed.stat.exists
 
 - name: set oracle to autostart
@@ -222,28 +241,5 @@
     state: present
     regexp: "^{{ oracle_db_name }}"
     line: "{{ oracle_db_name }}:{{ ora_user_env.ORACLE_HOME }}:Y"
-
-- name: compose the oracle init.d script
-  template: src=oracle_init.j2 dest=/etc/init.d/oracle mode=0755
-
-- name: register and start up the oracle service
-  service: name=oracle state=started enabled=yes
-  when: not oracle_installed.stat.exists
-
-- name: compose the oracle user creation script
-  template:
-    src: sqlplus_user_setup.sh.j2
-    dest: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
-    mode: 0755
-    owner: "{{ oracle_user }}"
-    group: "{{ oracle_group }}"
-  when: not oracle_installed.stat.exists
-
-- name: create the oracle db user
-  become: yes
-  become_user: "{{ oracle_user }}"
-  environment: "{{ora_user_env}}"
-  command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
-  when: not oracle_installed.stat.exists
 
 - include: tasks/dbpatch.yml

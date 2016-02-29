@@ -39,33 +39,31 @@
   register: patch_list
   failed_when: patch_list.rc not in [0, 1]
 
-- name: stop oracle
-  service: name=oracle state=stopped
-  when: patch_list.stdout.find(item.number) == -1
-  with_items: "{{oracle_latest_patches}}"
+- block:
+    - name: stop oracle
+      service: name=oracle state=stopped
+      with_items: "{{oracle_latest_patches}}"
 
-- name: create patches folders
-  file: name={{ oracle_tmp }}/{{ item.number }} state=directory owner={{ oracle_user }}
-  with_items: "{{oracle_latest_patches}}"
-  when: patch_list.stdout.find(item.number) == -1
+    - name: create patches folders
+      file: name={{ oracle_tmp }}/{{ item.number }} state=directory owner={{ oracle_user }}
+      with_items: "{{oracle_latest_patches}}"
 
-- name: unzip patches
-  unarchive:
-    src: "{{ oracle_installer_uri }}/{{ item.file_name }}"
-    dest: "{{ oracle_tmp }}/{{ item.number }}"
-    copy: no
-    creates: "{{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
-    owner: "{{ oracle_user }}"
-  with_items: "{{oracle_latest_patches}}"
-  when: patch_list.stdout.find(item.number) == -1
+    - name: unzip patches
+      unarchive:
+        src: "{{ oracle_installer_uri }}/{{ item.file_name }}"
+        dest: "{{ oracle_tmp }}/{{ item.number }}"
+        copy: no
+        creates: "{{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
+        owner: "{{ oracle_user }}"
+      with_items: "{{oracle_latest_patches}}"
 
-- name: apply latest patch rdbms
-  command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply | default('apply')}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
-  environment: "{{ ora_user_env }}"
-  become: yes
-  become_user: "{{ oracle_user }}"
+    - name: apply latest patch rdbms
+      command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply | default('apply')}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
+      environment: "{{ ora_user_env }}"
+      become: yes
+      become_user: "{{ oracle_user }}"
+      with_items: "{{oracle_latest_patches}}"
   when: patch_list.stdout.find(item.number) == -1
-  with_items: "{{oracle_latest_patches}}"
 
 - name: register and start up the oracle service
   service: name=oracle state=started enabled=yes
