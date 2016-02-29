@@ -13,8 +13,8 @@
 # install dependencies
 #
 
-- name: install dev tools
-  yum: name="@Development tools" state=present
+#- name: install dev tools
+#  yum: name="@Development tools" state=present
 
 - name: install x86 oracle dependencies
   yum: name={{ item }} state=present
@@ -22,14 +22,16 @@
     - man
     - wget
     - unzip
-    - unixODBC
-    - unixODBC-devel
-    - unixODBC-devel*x86_64
-    - unixODBC-*x86_64
+#    - unixODBC
+#    - unixODBC-devel
+#    - unixODBC-devel*x86_64
+#    - unixODBC-*x86_64
     - compat-libstdc++-296
     - compat-libstdc*x86_64
     - compat-glibc-2*
-    - elfutils-devel*x86_64
+    - elfutils-libelf-devel
+    - elfutils-devel
+    - elfutils-devel-static
     - glibc-*
     - libtool-ltdl*x86_64
     - readline
@@ -196,6 +198,7 @@
     group: "{{ oracle_group }}"
 
 - name: install oracle
+  become: yes
   become_user: "{{ oracle_user }}"
   environment: "{{ora_user_env}}"
   command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -responseFile {{ oracle_tmp }}/db_install.rsp"
@@ -237,6 +240,7 @@
   when: not oracle_installed.stat.exists
 
 - name: create the oracle db user
+  become: yes
   become_user: "{{ oracle_user }}"
   environment: "{{ora_user_env}}"
   command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
