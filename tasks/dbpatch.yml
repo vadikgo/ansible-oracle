@@ -18,8 +18,11 @@
 
 - name: get oracle support site access
   shell: ping -c 3 support.oracle.com | grep -q '100% packet loss'
+  args:
+      creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
   register: no_support_access
   ignore_errors: yes
+
   #failed_when: support_access.rc not in [0, 1]
 
 - name: generate response file
