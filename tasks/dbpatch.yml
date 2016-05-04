@@ -40,7 +40,7 @@
   become: yes
   become_user: "{{ oracle_user }}"
   register: patch_list
-  failed_when: patch_list.rc not in [0, 1]
+  failed_when: patch_list.rc > 1
 
 - block:
     - name: stop oracle

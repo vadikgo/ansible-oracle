@@ -1,0 +1,41 @@
+---
+# install DBMS_DST
+
+- name: Create folder for DBMS_DST
+  file: name={{ oracle_tmp }}/DBMS_DST state=directory owner={{ oracle_user }}
+
+- name: Copy SQL scripts
+  copy:
+    src: "files/DBMS_DST/{{item}}"
+    dest: "{{ oracle_tmp }}/DBMS_DST/{{item}}"
+    owner: "{{ oracle_user }}"
+  with_items:
+    - countstarTSTZ.sql
+    - countstatsTSTZ.sql
+    - upg_tzv_apply.sql
+    - upg_tzv_check.sql
+
+- name: Get current TZ status
+  shell: echo "SELECT version FROM v\$timezone_file where version >= {{oracle_tz_version}};" | $ORACLE_HOME/bin/sqlplus -S '/ as sysdba'
+  environment: "{{ ora_user_env }}"
+  become: yes
+  become_user: "{{oracle_user}}"
+  register: oracle_tz_version
+
+- block:
+    - name: Start Oracle TZ Update to version {{oracle_tz_version}}
+      shell: "$ORACLE_HOME/bin/sqlplus '/ as sysdba' @{{ oracle_tmp }}/DBMS_DST/{{item}}"
+      environment: "{{ ora_user_env }}"
+      become: yes
+      become_user: "{{oracle_user}}"
+      with_items:
+        - countstarTSTZ.sql
+        - upg_tzv_check.sql
+        - upg_tzv_apply.sql
+    - name: Restart Oracle DB
+      shell: echo "shutdown immediate; startup;" | $ORACLE_HOME/bin/sqlplus -S '/ as sysdba'
+      environment: "{{ ora_user_env }}"
+      become: yes
+      become_user: "{{oracle_user}}"
+
+  when: oracle_tz_version.stdout.find("no rows selected") != -1

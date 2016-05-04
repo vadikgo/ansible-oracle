@@ -8,5 +8,8 @@ sqlplus / as sysdba <<EOT
 CREATE USER {{ oracle_db_user }} IDENTIFIED BY {{ oracle_db_pass }};
 ALTER USER {{ oracle_db_user }} IDENTIFIED BY {{ oracle_db_pass }};
 GRANT connect, resource TO {{ oracle_db_user }};
+{% for line in oracle_system_commands %}
+{{ line }}
+{% endfor %}
 exit;
 EOT

@@ -57,14 +57,14 @@
 # config system files for oracle
 #
 
-- name: set up the oracle hostnames
-  lineinfile:
-    dest: /etc/hosts
-    state: present
-    line: "127.0.0.1 {{ item }}"
-  with_items:
-    - "{{ oracle_hostname }}"
-    - "{{ ansible_hostname }}"
+#- name: set up the oracle hostnames
+#  lineinfile:
+#    dest: /etc/hosts
+#    state: present
+#    line: "127.0.0.1 {{ item }}"
+#  with_items:
+#    - "{{ oracle_hostname }}"
+#    - "{{ ansible_hostname }}"
 
 - name: oracle-recommended sysctl
   sysctl:
@@ -84,12 +84,14 @@
     - { name: "net.core.rmem_max", value: "4194304" }
     - { name: "net.core.wmem_default", value: "262144" }
     - { name: "net.core.wmem_max", value: "1048576" }
+  register: sysctl_status
 
 - name: save sysctl config
   command: sysctl -p
   #ignore_errors: yes # because apparently the default centos config is invalid!
   register: oracle_sysctl
-  failed_when: oracle_sysctl.rc not in [0, 255]
+  failed_when: (oracle_sysctl.rc > 0) and (oracle_sysctl.rc < 255)
+  when: sysctl_status.changed
 
 # it's in the oracle recommendations. i don't even know.
 - name: oracle-recommended PAM config
@@ -210,7 +212,7 @@
       command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -responseFile {{ oracle_tmp }}/db_install.rsp"
       args:
           creates: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
-      failed_when: install_result.rc not in [0, 6]
+      failed_when: install_result.rc != 0 and install_result.rc != 6
       register: install_result
 
     - name: general oracle post-installation
@@ -244,4 +246,5 @@
     regexp: "^{{ oracle_db_name }}"
     line: "{{ oracle_db_name }}:{{ ora_user_env.ORACLE_HOME }}:Y"
 
+- include: tasks/dbms_time_update.yml
 - include: tasks/dbpatch.yml
