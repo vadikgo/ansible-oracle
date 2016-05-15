@@ -52,6 +52,7 @@
     - libaio
     - libaio-devel
     - make
+    - libselinux-python
 
 #
 # config system files for oracle
@@ -73,8 +74,8 @@
     state: present
     ignoreerrors: yes # Ignore errors about unknown keys
   with_items:
-    - { name: "kernel.shmall", value: "2097152" }
-    - { name: "kernel.shmmax", value: "1050470400" }
+    - { name: "kernel.shmall", value: "10523004" }
+    - { name: "kernel.shmmax", value: "6465333657" }
     - { name: "kernel.shmmni", value: "4096" }
     - { name: "kernel.sem", value: "250 32000 100 128" }
     - { name: "fs.file-max", value: "6815744" }
@@ -84,6 +85,8 @@
     - { name: "net.core.rmem_max", value: "4194304" }
     - { name: "net.core.wmem_default", value: "262144" }
     - { name: "net.core.wmem_max", value: "1048576" }
+    - { name: "net.ipv4.ip_local_port_range", value: "9000 65500"}
+  ignore_errors: yes
   register: sysctl_status
 
 - name: save sysctl config
@@ -119,8 +122,13 @@
   command: /usr/sbin/setenforce 0
   when: get_enforce.stdout | match("Enforcing")
 
+- name: Check /etc/selinux/config exists
+  stat: path=/etc/selinux/config
+  register: selinux_config
+
 - name: oracle-recommended selinux
   selinux: policy=targeted state=disabled
+  when: selinux_config.stat.exists == True
 
 #
 # create the oracle user and groups
@@ -184,7 +192,7 @@
     - "export ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}"
     - "export PATH=$PATH:$ORACLE_HOME/bin"
     - "export NLS_LANG={{ ora_user_env.NLS_LANG }}"
-    - "stty erase ^H"
+    #- "stty erase ^H"
 
 #
 # install oracle
@@ -209,11 +217,11 @@
       become: yes
       become_user: "{{ oracle_user }}"
       environment: "{{ora_user_env}}"
-      command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -responseFile {{ oracle_tmp }}/db_install.rsp"
+      command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -ignorePrereq -responseFile {{ oracle_tmp }}/db_install.rsp"
       args:
           creates: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
-      failed_when: install_result.rc != 0 and install_result.rc != 6
       register: install_result
+      failed_when: install_result.rc not in [0, 6]
 
     - name: general oracle post-installation
       command: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
