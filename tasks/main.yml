@@ -93,7 +93,7 @@
   command: sysctl -p
   #ignore_errors: yes # because apparently the default centos config is invalid!
   register: oracle_sysctl
-  failed_when: (oracle_sysctl.rc > 0) and (oracle_sysctl.rc < 255)
+  failed_when: oracle_sysctl.rc not in [0, 255]
   when: sysctl_status.changed
 
 # it's in the oracle recommendations. i don't even know.
