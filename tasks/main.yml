@@ -1,5 +1,5 @@
 ---
-- include: main.yml
+- include: install_db.yml
   when: oracle_install_db
 - include: dbms_time_update.yml
   when: oracle_install_time_update
