@@ -31,7 +31,7 @@
     - compat-glibc-2*
     - elfutils-libelf-devel
     - elfutils-devel
-    - elfutils-devel-static
+#    - elfutils-devel-static
     - glibc-*
     - libtool-ltdl*x86_64
     - readline
@@ -150,23 +150,7 @@
     password: "{{ oracle_pass }}"
     append: yes
 
-#
-# unpack the oracle installers
-#
 - file: name={{oracle_tmp}} state=directory owner={{ oracle_user }}
-- name: check if oracle has already been unzipped
-  stat: path={{ oracle_tmp }}/database
-  register: oracle_unzip
-
-- name: unzip installer
-  unarchive:
-    src: "{{ oracle_installer_uri }}/{{ item }}"
-    dest: "{{ oracle_tmp }}"
-    copy: no
-    creates:
-    owner: "{{ oracle_user }}"
-  with_items: "{{oracle_installer}}"
-  when: oracle_unzip.stat.exists == False
 
 - name: create the oracle installation path
   file:
@@ -213,6 +197,14 @@
   template: src=oracle_init.j2 dest=/etc/init.d/oracle mode=0755
 
 - block:
+    - name: unzip installer
+      unarchive:
+        src: "{{ oracle_installer_uri }}/{{ item }}"
+        dest: "{{ oracle_tmp }}"
+        copy: no
+        owner: "{{ oracle_user }}"
+      with_items: "{{oracle_installer}}"
+
     - name: install oracle
       become: yes
       become_user: "{{ oracle_user }}"

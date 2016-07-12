@@ -16,17 +16,17 @@
     owner: "{{ oracle_user }}"
   when: opatch_version.stdout.find(oracle_opatch_version) == -1
 
-- name: get oracle support site access
-  shell: ping -c 3 support.oracle.com | grep -q '100% packet loss'
-  args:
-      creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
-  register: no_support_access
-  ignore_errors: yes
+#- name: get oracle support site access
+#  shell: ping -c 3 support.oracle.com | grep -q '100% packet loss'
+#  args:
+#      creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+#  register: no_support_access
+#  ignore_errors: yes
 
-  #failed_when: support_access.rc not in [0, 1]
 
 - name: generate response file
-  shell: echo {{no_support_access|success | ternary('NONE','')}}| {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output {{ ora_user_env.ORACLE_HOME }}/ocm.rsp -repeater NONE -no_banner foo bar
+#  shell: echo {{no_support_access|success | ternary('NONE','')}}| {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output {{ ora_user_env.ORACLE_HOME }}/ocm.rsp -repeater NONE -no_banner foo bar
+  shell: echo NONE | {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output {{ ora_user_env.ORACLE_HOME }}/ocm.rsp -repeater NONE -no_banner foo bar
   become: yes
   become_user: "{{ oracle_user }}"
   environment: "{{ ora_user_env }}"

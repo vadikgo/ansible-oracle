@@ -6,7 +6,7 @@
 
 - name: Copy SQL scripts
   copy:
-    src: "files/DBMS_DST/{{item}}"
+    src: "DBMS_DST/{{item}}"
     dest: "{{ oracle_tmp }}/DBMS_DST/{{item}}"
     owner: "{{ oracle_user }}"
   with_items:
