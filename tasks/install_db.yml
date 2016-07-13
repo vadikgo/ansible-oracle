@@ -9,29 +9,17 @@
 # - You're running this task as a privileged user (root or sudo)
 # - You've already set up any extra Yum repositories.
 
-#
-# install dependencies
-#
-
-#- name: install dev tools
-#  yum: name="@Development tools" state=present
-
 - name: install x86 oracle dependencies
   yum: name={{ item }} state=present
   with_items:
     - man
     - wget
     - unzip
-#    - unixODBC
-#    - unixODBC-devel
-#    - unixODBC-devel*x86_64
-#    - unixODBC-*x86_64
     - compat-libstdc++-296
     - compat-libstdc*x86_64
     - compat-glibc-2*
     - elfutils-libelf-devel
     - elfutils-devel
-#    - elfutils-devel-static
     - glibc-*
     - libtool-ltdl*x86_64
     - readline
@@ -53,19 +41,6 @@
     - libaio-devel
     - make
     - libselinux-python
-
-#
-# config system files for oracle
-#
-
-#- name: set up the oracle hostnames
-#  lineinfile:
-#    dest: /etc/hosts
-#    state: present
-#    line: "127.0.0.1 {{ item }}"
-#  with_items:
-#    - "{{ oracle_hostname }}"
-#    - "{{ ansible_hostname }}"
 
 - block:
   - name: oracle-recommended sysctl
@@ -225,6 +200,11 @@
 
     - name: register and start up the oracle service
       service: name=oracle state=started enabled=yes
+      when: ansible_connection != 'docker'
+
+    - name: start oracle on docker
+      shell: /etc/init.d/oracle start
+      when: ansible_connection == 'docker'
 
     - name: compose the oracle user creation script
       template:
