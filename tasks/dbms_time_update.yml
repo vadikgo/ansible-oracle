@@ -33,7 +33,7 @@
         - upg_tzv_check.sql
         - upg_tzv_apply.sql
     - name: Restart Oracle DB
-      shell: echo "shutdown immediate; startup;" | $ORACLE_HOME/bin/sqlplus -S '/ as sysdba'
+      shell: echo "shutdown abort; startup;" | $ORACLE_HOME/bin/sqlplus -S '/ as sysdba'
       environment: "{{ ora_user_env }}"
       become: yes
       become_user: "{{oracle_user}}"

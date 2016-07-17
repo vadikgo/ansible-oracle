@@ -22,15 +22,17 @@
   register: support_access
 
 - name: generate response file
-  shell: echo {{(support_access.status == -1) | ternary("NONE","''")}} | {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output {{ ora_user_env.ORACLE_HOME }}/ocm.rsp -repeater NONE -no_banner foo bar
+  shell: echo NONE | {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output {{ ora_user_env.ORACLE_HOME }}/ocm.rsp -repeater NONE -no_banner foo bar
   args:
       creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
   become: yes
   become_user: "{{ oracle_user }}"
   environment: "{{ ora_user_env }}"
-  args:
-      chdir: "{{ ora_user_env.ORACLE_HOME }}"
-      creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
+  when: support_access.status == -1
+
+- name: copy response file from files
+  copy: src=ocm.rsp dest={{ ora_user_env.ORACLE_HOME }}/ocm.rsp owner={{ oracle_user }}
+  when: support_access.status != -1
 
 - name: get patch list
   shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |egrep '[0-9]{8,}'"
@@ -71,11 +73,3 @@
       become_user: "{{ oracle_user }}"
       with_items: "{{oracle_latest_patches}}"
   when: patch_list.stdout.find(item.number) == -1
-
-- name: register and start up the oracle service
-  service: name=oracle state=started enabled=yes
-  when: ansible_connection != 'docker'
-
-- name: start oracle on docker
-  shell: /etc/init.d/oracle start
-  when: ansible_connection == 'docker'

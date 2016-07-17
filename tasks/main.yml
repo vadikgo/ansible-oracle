@@ -5,3 +5,18 @@
   when: oracle_install_time_update
 - include: dbpatch.yml
   when: oracle_install_db_patch
+
+- name: register and start up the oracle service
+  service: name=oracle state=started enabled=yes
+  when: ansible_connection != 'docker'
+
+- name: start oracle on docker
+  shell: /etc/init.d/oracle start
+  when: ansible_connection == 'docker'
+
+#- name: install db for docker
+#  become: yes
+#  become_user: "{{ oracle_user }}"
+#  environment: "{{ora_user_env}}"
+#  command: "{{ ora_user_env.ORACLE_HOME }}/bin/dbca -silent -createDatabase -templateName General_Purpose.dbc -sid {{oracle_db_name}} -gdbName {{oracle_db_name}} -datafileDestination {{ ora_user_env.ORACLE_BASE }}/oradata -responseFile {{oracle_tmp}}/db_install.rsp -syspassword {{oracle_db_syspass}} -systempassword {{oracle_db_pass}} -dbsnmppassword {{oracle_db_pass}}"
+#  when: ansible_connection == 'docker'
