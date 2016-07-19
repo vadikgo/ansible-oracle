@@ -7,8 +7,8 @@ recommendations.
 
 ## Requirements
 
-- CentOS 6.4+
-- Ansible 1.4
+- CentOS 6.7+
+- Ansible 2.1
 - Oracle Database 11gR2 [installation content](http://www.oracle.com/technetwork/database/enterprise-edition/downloads/112010-linx8664soft-100572.html)
 
 ## Variables
@@ -18,24 +18,40 @@ commented.
 
 ## Example
 
-    ---
-    - name: set up an oracle database
-      sudo: yes
-      vars:
-        oracle_path: /u01/app           # ORACLE_BASE will be /u01/app/oracle
-        oracle_db_name: my_special_db   # ORACLE_SID will be my_special_db
-        oracle_db_home: special_home    # ORACLE_HOME will be /u01/app/oracle/product/11.2.0/special_home
-        oracle_db_user: devuser
-        oracle_db_pass: AnAwesomeAndAmazingP4ssw0rd
-        oracle_db_syspass: AMor3AwesomeAndAmazingP4ssw0rd
-        oracle_installer_uri: http://my.host # Ansible will download http://my.host/linux.x64_11gR2_database_1of2.zip
-      roles:
-        # more roles here
-        - oracle
+```
+- hosts: oracle
+  pre_tasks:
+    - name: ensure packages required are installed
+      yum: pkg={{item}} state=present
+      with_items:
+        - bc
+        - libselinux-python
+        - sudo
+    - name: enable sudo tty
+      lineinfile: dest=/etc/sudoers state=present regexp="^Defaults    requiretty$" line="Defaults    !requiretty"
+    - name: Set /dev/shm size
+      shell: mount -o remount,size=$(free -m|awk '/^Mem/ {print $2}')m /dev/shm
+      when: ansible_connection != 'docker'
+  roles:
+    - ansible-oracle
+  vars:
+    oracle_path: /u01
+    oracle_db_name: DB1
+    oracle_db_home: oracle_db_home
+    oracle_db_pass: OracleUs3r
+    oracle_db_syspass: Oracle4dmin
+    oracle_installer_uri: http://192.168.10.111:8000
+    #oracle_installer_uri: http://10.21.25.212:8000/ora11204
+    oracle_db_mem: 1024
+    oracle_installer: [p13390677_112040_Linux-x86-64_1of7.zip, p13390677_112040_Linux-x86-64_2of7.zip]
+    oracle_latest_patches:
+        - { file_name: patch/p21948347_112040_Linux-x86-64.zip, number: "21948347" }
+        - { file_name: patch/p21972320_112040_Linux-x86-64.zip, number: "21972320", apply: napply -skip_subset -skip_duplicate }
+        - { file_name: patch/p22139245_112040_Linux-x86-64.zip, number: "22139245" }
+    oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
+    oracle_opatch_version: 11.2.0.3.12
+```
 
 ## TODO
 
- - Handle multiple runs with different `oracle_db_home` and/or `oracle_db_name`
-   vars, instead of skipping the whole installation process.
- - Optionally allow Oracle installer file downloads from S3 (e.g. with
-   [the s3 module](http://docs.ansible.com/s3_module.html)).
+ - fix TZ update
