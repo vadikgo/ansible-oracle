@@ -60,10 +60,6 @@ oracle_installer_uri: http://oracle.installer.host
 # official oracle installer archives
 # source: http://www.oracle.com/technetwork/database/enterprise-edition/downloads/112010-linx8664soft-100572.html
 #
-# - if you already have these files, stick them at {{ oracle_tmp }}. ansible
-#   will automatically skip the downloading step.
-# - if you've already extracted everything, set the vars below to false. your
-#   extracted installer directory should be {{ oracle_tmp }}/database.
 oracle_installer: [p13390677_112040_Linux-x86-64_1of7.zip, p13390677_112040_Linux-x86-64_2of7.zip]
 oracle_latest_patches:
     - { file_name: patch/p21948347_112040_Linux-x86-64.zip, number: "21948347" }

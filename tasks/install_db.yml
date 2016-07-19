@@ -187,7 +187,7 @@
       become: yes
       become_user: "{{ oracle_user }}"
       environment: "{{ora_user_env}}"
-      command: "{{ oracle_tmp }}/database/runInstaller -silent -waitforcompletion -ignoreSysPrereqs -ignorePrereq -responseFile {{ oracle_tmp }}/db_install.rsp"
+      command: "{{ oracle_tmp }}/database/runInstaller -silent -noconfig -waitforcompletion -ignoreSysPrereqs -ignorePrereq -responseFile {{ oracle_tmp }}/db_install.rsp"
       args:
           creates: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
       register: install_result
@@ -199,13 +199,19 @@
     - name: db-specific oracle post-installation
       command: "{{ ora_user_env.ORACLE_HOME }}/root.sh"
 
+    - include: dbpatch.yml
+      when: oracle_install_db_patch
+
+    - include: create_dbca_db.yml
+      #when: ansible_connection == 'docker'
+
     - name: compose the oracle user creation script
       template:
         src: sqlplus_user_setup.sh.j2
         dest: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
-        mode: 0755
         owner: "{{ oracle_user }}"
         group: "{{ oracle_group }}"
+        mode: 0755
 
     - name: create the oracle db user
       become: yes
