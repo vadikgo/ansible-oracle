@@ -5,10 +5,5 @@
 - include: dbms_time_update.yml
   when: oracle_install_time_update
 
-- name: register and start up the oracle service
-  service: name=oracle state=started enabled=yes
-  when: ansible_connection != 'docker'
-
-- name: start oracle on docker
+- name: start oracle
   shell: /etc/init.d/oracle start
-  when: ansible_connection == 'docker'
