@@ -26,6 +26,7 @@ case "$1" in
        su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
        su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl start dbconsole"
    }
+   su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl status|grep -q TNS-00511 && lsnrctl start"
    ;;
 'stop')
     $0 status|grep -q started && {
