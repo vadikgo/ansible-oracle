@@ -48,10 +48,7 @@ commented.
         - { file_name: patch/p21948347_112040_Linux-x86-64.zip, number: "21948347" }
         - { file_name: patch/p21972320_112040_Linux-x86-64.zip, number: "21972320", apply: napply -skip_subset -skip_duplicate }
         - { file_name: patch/p22139245_112040_Linux-x86-64.zip, number: "22139245" }
+        - { file_name: patch/p22037014_112040_Linux-x86-64.zip, number: "22037014" } # DST25
     oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
     oracle_opatch_version: 11.2.0.3.12
 ```
-
-## TODO
-
- - fix TZ update
