@@ -28,6 +28,7 @@ case "$1" in
    }
    su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl status|grep -q TNS-00511 && lsnrctl start"
    su - $ORACLE_USER -c "if $ORACLE_HOME/bin/lsnrctl status|grep -q 'The listener supports no services'; then echo 'alter system register;' |sqlplus -S '/ as sysdba'; fi"
+
    ;;
 'stop')
     $0 status|grep -q started && {
