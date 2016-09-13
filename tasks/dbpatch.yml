@@ -16,23 +16,8 @@
     owner: "{{ oracle_user }}"
   when: opatch_version.stdout.find(oracle_opatch_version) == -1
 
-- name: get oracle support site access
-  uri: url=http://support.oracle.com
-  ignore_errors: yes
-  register: support_access
-
-- name: generate response file
-  shell: echo NONE | {{ ora_user_env.ORACLE_HOME }}/OPatch/ocm/bin/emocmrsp -output {{ ora_user_env.ORACLE_HOME }}/ocm.rsp -repeater NONE -no_banner foo bar
-  args:
-      creates: "{{ ora_user_env.ORACLE_HOME }}/ocm.rsp"
-  become: yes
-  become_user: "{{ oracle_user }}"
-  environment: "{{ ora_user_env }}"
-  when: support_access.status == -1
-
-- name: copy response file from files
+- name: copy response file from files oracle
   copy: src=ocm.rsp dest={{ ora_user_env.ORACLE_HOME }}/ocm.rsp owner={{ oracle_user }}
-  when: support_access.status != -1
 
 - name: get patch list
   shell: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch lsinventory |egrep '[0-9]{8,}'"
@@ -67,7 +52,7 @@
       with_items: "{{oracle_latest_patches}}"
 
     - name: apply latest patch rdbms
-      command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply | default('apply')}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}"
+      command: "{{ ora_user_env.ORACLE_HOME }}/OPatch/opatch {{item.apply | default('apply')}} -silent -ocmrf {{ ora_user_env.ORACLE_HOME }}/ocm.rsp {{ oracle_tmp }}/{{ item.number }}/{{ item.number }}/{{ item.subfolder | default('')}}"
       environment: "{{ ora_user_env }}"
       become: yes
       become_user: "{{ oracle_user }}"

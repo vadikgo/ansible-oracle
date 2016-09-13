@@ -68,6 +68,12 @@ oracle_latest_patches:
 oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
 oracle_opatch_version: 11.2.0.3.12
 
+# oracle 12 example:
+#oracle_installer: [p21419221_121020_Linux-x86-64_1of10.zip, p21419221_121020_Linux-x86-64_2of10.zip]
+#oracle_latest_patches:
+#    - { file_name: patch/p23177536_121020_Linux-x86-64.zip, number: "23177536" }
+#    - { file_name: patch/p23054246_121020_Linux-x86-64.zip, number: "23054246" }
+#    - { file_name: patch/p23273686_121020_Linux-x86-64.zip, number: "23144544", subfolder: "23273686" }
 #oracle_version: "{{oracle_installer[0].find('112040_Linux') != -1 | ternary('11.2.0', '12.1.0')}}"
 # may be 11.2.0 or 12.1.0
 oracle_version: 11.2.0
@@ -76,7 +82,7 @@ oracle_system_commands:
   - ALTER SYSTEM SET processes=300 SCOPE=spfile;
   - ALTER SYSTEM SET sessions=900 SCOPE=spfile;
 
-oracle_tz_version: 25
+oracle_tz_version: 26
 
 oracle_install_db: yes
 oracle_install_time_update: yes

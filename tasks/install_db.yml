@@ -147,14 +147,14 @@
     recurse: yes
 
 - name: set oracle user environment
-  lineinfile: dest=/home/{{ oracle_user }}/.bashrc state=present line="{{ item }}"
-  with_items:
-    - "export ORACLE_BASE={{ ora_user_env.ORACLE_BASE }}"
-    - "export ORACLE_SID={{ ora_user_env.ORACLE_SID }}"
-    - "export ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}"
-    - "export PATH=$PATH:$ORACLE_HOME/bin"
-    - "export NLS_LANG={{ ora_user_env.NLS_LANG }}"
-    #- "stty erase ^H"
+  blockinfile:
+    dest: /home/{{ oracle_user }}/.bashrc
+    block: |
+      export ORACLE_BASE={{ ora_user_env.ORACLE_BASE }}
+      export ORACLE_SID={{ ora_user_env.ORACLE_SID }}
+      export ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}
+      export PATH=$PATH:$ORACLE_HOME/bin
+      export NLS_LANG={{ ora_user_env.NLS_LANG }}
 
 - name: check if /etc/oratab exists
   stat: path=/etc/oratab
@@ -172,6 +172,13 @@
       template:
         src: db_install.rsp.j2
         dest: "{{ oracle_tmp }}/db_install.rsp"
+        owner: "{{ oracle_user }}"
+        group: "{{ oracle_group }}"
+
+    - name: compose the oracle automated dbca settings
+      template:
+        src: dbca.rsp.j2
+        dest: "{{ oracle_tmp }}/dbca.rsp"
         owner: "{{ oracle_user }}"
         group: "{{ oracle_group }}"
 
