@@ -1,0 +1,24 @@
+# Dockerfile for building oracle conatiner
+#
+
+# pull base image
+FROM sbt-opir-246.ca.sbrf.ru:4567/opir/centos7-sbt-ansible
+
+COPY . /tmp/ansible-oracle
+RUN set -x \
+    && yum install -y iproute \
+    && echo "$(ip -f inet addr show eth0 |grep -Po 'inet \K[\d.]+') oracle" >> /etc/hosts \
+    && yum install -y http://10.116.99.190/files/docker/tini/tini_0.10.0.rpm \
+    && cd /tmp/ansible-oracle/tests \
+    && ansible-playbook test_oracle_install-12.1.0.yml -e "oracle_install_db=False oracle_install_db_patch=False"
+
+RUN set -x \
+    && cd /tmp/ansible-oracle/tests \
+    && ansible-playbook test_oracle_install-12.1.0.yml -e "oracle_install_db=True oracle_install_db_patch=False"
+
+RUN set -x \
+    && cd /tmp/ansible-oracle/tests \
+    && ansible-playbook test_oracle_install-12.1.0.yml -e "oracle_install_db=False oracle_install_db_patch=True"
+
+ENTRYPOINT ["/usr/bin/tini", "--", "/start_oracle.sh"]
+EXPOSE 1521 1158

@@ -7,6 +7,7 @@
   become_user: "{{ oracle_user }}"
   environment: "{{ ora_user_env }}"
   register: opatch_version
+  changed_when: no
 
 - name: unzip opatch
   unarchive:
@@ -26,17 +27,19 @@
   become_user: "{{ oracle_user }}"
   register: patch_list
   failed_when: patch_list.rc > 1
+  changed_when: no
 
 - block:
     - name: stop oracle
       service: name=oracle state=stopped
       with_items: "{{oracle_latest_patches}}"
-      when: ansible_connection != 'docker'
+      when: not oracle_docker
 
     - name: stop oracle on docker
-      shell: /etc/init.d/oracle stop
+      command: /etc/init.d/oracle stop
       with_items: "{{oracle_latest_patches}}"
-      when: ansible_connection == 'docker'
+      when: oracle_docker
+      changed_when: no
 
     - name: create patches folders
       file: name={{ oracle_tmp }}/{{ item.number }} state=directory owner={{ oracle_user }}
@@ -56,5 +59,7 @@
       environment: "{{ ora_user_env }}"
       become: yes
       become_user: "{{ oracle_user }}"
+      register: patch_apply
+      changed_when: patch_apply.stdout.find(' successfully applied.') != -1
       with_items: "{{oracle_latest_patches}}"
   when: patch_list.stdout.find(item.number) == -1

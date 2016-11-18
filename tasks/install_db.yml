@@ -9,86 +9,15 @@
 # - You're running this task as a privileged user (root or sudo)
 # - You've already set up any extra Yum repositories.
 
-- name: install x86 oracle dependencies
-  yum: name={{ item }} state=present
-  with_items:
-    - man
-    - wget
-    - unzip
-    - compat-libstdc++-296
-    - compat-libstdc*x86_64
-    - compat-glibc-2*
-    - elfutils-libelf-devel
-    - elfutils-devel
-    - glibc-*
-    - libtool-ltdl*x86_64
-    - readline
-    - libcap*x86_64
-    - libattr*x86_64
-    - glibc-devel.i686
-    - binutils
-    - compat-libcap1
-    - compat-libstdc++-33
-    - gcc
-    - gcc-c++
-    - glibc
-    - glibc-devel
-    - ksh
-    - libgcc
-    - libstdc++
-    - libstdc++-devel
-    - libaio
-    - libaio-devel
-    - make
-    - libselinux-python
-
 - block:
-  - name: oracle-recommended sysctl
-    sysctl:
-      name: "{{ item.name }}"
-      value: "{{ item.value }}"
-      state: present
-      ignoreerrors: yes # Ignore errors about unknown keys
-    with_items:
-      - { name: "kernel.shmall", value: "10523004" }
-      - { name: "kernel.shmmax", value: "6465333657" }
-      - { name: "kernel.shmmni", value: "4096" }
-      - { name: "kernel.sem", value: "250 32000 100 128" }
-      - { name: "fs.file-max", value: "6815744" }
-      - { name: "fs.aio-max-nr", value: "1048576" }
-      - { name: "net.ipv4.ip_local_port_range", value: "9000 65500" }
-      - { name: "net.core.rmem_default", value: "262144" }
-      - { name: "net.core.rmem_max", value: "4194304" }
-      - { name: "net.core.wmem_default", value: "262144" }
-      - { name: "net.core.wmem_max", value: "1048576" }
-      - { name: "net.ipv4.ip_local_port_range", value: "9000 65500"}
-    ignore_errors: yes
-    register: sysctl_status
-
-  - name: save sysctl config
-    command: sysctl -p
-    #ignore_errors: yes # because apparently the default centos config is invalid!
-    register: oracle_sysctl
-    failed_when: oracle_sysctl.rc not in [0, 255]
-    when: sysctl_status.changed
-
-  - name: get enforce status
-    command: /usr/sbin/getenforce
-    register: get_enforce
+  - name: oracle-recommended selinux
+    selinux: policy=targeted state=disabled
+    register: selinux_state
 
   - name: disable setenforce # because oracle says so, that's why
     command: /usr/sbin/setenforce 0
-    when: get_enforce.stdout | match("Enforcing")
-
-  - name: Check /etc/selinux/config exists
-    stat: path=/etc/selinux/config
-    register: selinux_config
-
-  - name: oracle-recommended selinux
-    selinux: policy=targeted state=disabled
-    when: selinux_config.stat.exists == True
-
-  when: ansible_connection != 'docker'
+    when: selinux_state.changed
+  when: not oracle_docker
 
 # it's in the oracle recommendations. i don't even know.
 - name: oracle-recommended PAM config
@@ -108,28 +37,6 @@
     - "oracle soft nofile 1024"
     - "oracle hard nofile 65536"
 
-#
-# create the oracle user and groups
-#
-
-- name: create initial groups for the oracle user
-  group: name={{ item }} state=present
-  with_items:
-    - "{{ oracle_group }}"
-    - "{{ oracle_dba_group }}"
-
-- name: create oracle user
-  user:
-    name: "{{ oracle_user }}"
-    group: "{{ oracle_group }}"
-    groups: "{{ oracle_dba_group }}"
-    home: /home/{{ oracle_user }}
-    shell: /bin/bash
-    password: "{{ oracle_pass }}"
-    append: yes
-
-- file: name={{oracle_tmp}} state=directory owner={{ oracle_user }}
-
 - name: create the oracle installation path
   file:
     mode: 0755
@@ -146,16 +53,6 @@
     state: directory
     recurse: yes
 
-- name: set oracle user environment
-  blockinfile:
-    dest: /home/{{ oracle_user }}/.bashrc
-    block: |
-      export ORACLE_BASE={{ ora_user_env.ORACLE_BASE }}
-      export ORACLE_SID={{ ora_user_env.ORACLE_SID }}
-      export ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}
-      export PATH=$PATH:$ORACLE_HOME/bin
-      export NLS_LANG={{ ora_user_env.NLS_LANG }}
-
 - name: check if /etc/oratab exists
   stat: path=/etc/oratab
   register: oratab
@@ -164,24 +61,7 @@
   stat: path={{ ora_user_env.ORACLE_BASE }}/oradata/{{ora_user_env.ORACLE_SID}}
   register: db_dir
 
-- name: compose the oracle init.d script
-  template: src=oracle_init.j2 dest=/etc/init.d/oracle mode=0755
-
 - block:
-    - name: compose the oracle automated installer settings
-      template:
-        src: db_install.rsp.j2
-        dest: "{{ oracle_tmp }}/db_install.rsp"
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-
-    - name: compose the oracle automated dbca settings
-      template:
-        src: dbca.rsp.j2
-        dest: "{{ oracle_tmp }}/dbca.rsp"
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-
     - name: unzip installer
       unarchive:
         src: "{{ oracle_installer_uri }}/{{ item }}"
@@ -202,35 +82,19 @@
 
     - name: general oracle post-installation
       command: "{{ oracle_path }}/oraInventory/orainstRoot.sh"
+      when: install_result.changed
 
     - name: db-specific oracle post-installation
       command: "{{ ora_user_env.ORACLE_HOME }}/root.sh"
-
-    - include: dbpatch.yml
-      when: oracle_install_db_patch
-
-    - include: create_dbca_db.yml
-      #when: ansible_connection == 'docker'
-
-    - name: compose the oracle user creation script
-      template:
-        src: sqlplus_user_setup.sh.j2
-        dest: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
-        owner: "{{ oracle_user }}"
-        group: "{{ oracle_group }}"
-        mode: 0755
-
-    - name: create the oracle db user
-      become: yes
-      become_user: "{{ oracle_user }}"
-      environment: "{{ora_user_env}}"
-      command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
-
-    - name: set oracle to autostart
-      lineinfile:
-        dest: /etc/oratab
-        state: present
-        regexp: "^{{ oracle_db_name }}"
-        line: "{{ oracle_db_name }}:{{ ora_user_env.ORACLE_HOME }}:Y"
+      when: install_result.changed
 
   when: not (db_dir.stat.exists and oratab.stat.exists)
+
+- name: entrypoint for docker
+  template:
+    src: start_oracle.sh
+    dest: /start_oracle.sh
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    mode: 0755
+  when: oracle_docker

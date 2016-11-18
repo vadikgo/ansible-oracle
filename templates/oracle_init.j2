@@ -11,7 +11,7 @@
 #
 # Source: http://janhellevik.com/?p=923
 
-. /etc/rc.d/init.d/functions
+[ -f /etc/rc.d/init.d/functions ] && . /etc/rc.d/init.d/functions
 
 #LOCKFILE=/var/lock/subsys/oracle
 ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}
@@ -24,7 +24,7 @@ case "$1" in
        echo -n $"Starting Oracle Database:"
        su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl start"
        su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbstart $ORACLE_HOME"
-       su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl start dbconsole"
+      [ -f $ORACLE_HOME/bin/emctl ] && su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl start dbconsole"
    }
    su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl status|grep -q TNS-00511 && lsnrctl start"
    su - $ORACLE_USER -c "if $ORACLE_HOME/bin/lsnrctl status|grep -q 'The listener supports no services'; then echo 'alter system register;' |sqlplus -S '/ as sysdba'; fi"
@@ -35,7 +35,7 @@ case "$1" in
        echo -n $"Stopping Oracle Database:"
        su - $ORACLE_USER -c "$ORACLE_HOME/bin/lsnrctl stop"
        su - $ORACLE_USER -c "$ORACLE_HOME/bin/dbshut $ORACLE_HOME"
-       su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl stop dbconsole"
+       [ -f $ORACLE_HOME/bin/emctl ] && su - $ORACLE_USER -c "$ORACLE_HOME/bin/emctl stop dbconsole"
    }
    ;;
 'restart')

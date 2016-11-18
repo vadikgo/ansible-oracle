@@ -1,0 +1,11 @@
+---
+- hosts: localhost
+  connection: local
+  pre_tasks:
+    - name: load variables for test
+      include_vars: vars/docker-11.2.0.yml
+      no_log: yes
+  roles:
+    - ansible-oracle
+  vars:
+    oracle_docker: yes

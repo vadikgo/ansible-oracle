@@ -1,9 +1,117 @@
 ---
+- name: create initial groups for the oracle user
+  group: name={{ item }} state=present
+  with_items:
+    - "{{ oracle_group }}"
+    - "{{ oracle_dba_group }}"
+
+- name: create oracle user
+  user:
+    name: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+    groups: "{{ oracle_dba_group }}"
+    home: /home/{{ oracle_user }}
+    shell: /bin/bash
+    password: "{{ oracle_pass }}"
+    append: yes
+
+- name: create temp folder
+  file: name={{oracle_tmp}} state=directory owner={{ oracle_user }}
+
+- name: oracle-recommended sysctl
+  sysctl:
+    name: "{{ item.name }}"
+    value: "{{ item.value }}"
+    state: present
+    ignoreerrors: yes # Ignore errors about unknown keys
+    sysctl_set: yes
+  with_items:
+    - { name: "kernel.shmall", value: "10523004" }
+    - { name: "kernel.shmmax", value: "6465333657" }
+    - { name: "kernel.shmmni", value: "4096" }
+    - { name: "kernel.sem", value: "250 32000 100 128" }
+    - { name: "fs.file-max", value: "6815744" }
+    - { name: "fs.aio-max-nr", value: "1048576" }
+    - { name: "net.ipv4.ip_local_port_range", value: "9000 65500" }
+    - { name: "net.core.rmem_default", value: "262144" }
+    - { name: "net.core.rmem_max", value: "4194304" }
+    - { name: "net.core.wmem_default", value: "262144" }
+    - { name: "net.core.wmem_max", value: "1048576" }
+    - { name: "net.ipv4.ip_local_port_range", value: "9000 65500"}
+  ignore_errors: yes
+
+- name: install x86 oracle dependencies
+  yum: name={{ item }} state=present
+  with_items:
+    - man
+    - wget
+    - unzip
+    #- compat-libstdc++-296
+    - compat-libstdc*x86_64
+    - compat-glibc-2*
+    - elfutils-libelf-devel
+    - elfutils-devel
+    - glibc-*
+    - libtool-ltdl*x86_64
+    - readline
+    - libcap*x86_64
+    - libattr*x86_64
+    - glibc-devel.i686
+    - binutils
+    - compat-libcap1
+    - compat-libstdc++-33
+    - gcc
+    - gcc-c++
+    - glibc
+    - glibc-devel
+    - ksh
+    - libgcc
+    - libstdc++
+    - libstdc++-devel
+    - libaio
+    - libaio-devel
+    - make
+    - libselinux-python
+    - psmisc
+
+- name: compose the oracle automated installer settings
+  template:
+    src: db_install.rsp.j2
+    dest: "{{ oracle_tmp }}/db_install.rsp"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+
+- name: compose the oracle automated dbca settings
+  template:
+    src: dbca.rsp.j2
+    dest: "{{ oracle_tmp }}/dbca.rsp"
+    owner: "{{ oracle_user }}"
+    group: "{{ oracle_group }}"
+
+- name: compose the oracle init.d script
+  template: src=oracle_init.j2 dest=/etc/init.d/oracle mode=0755
+
+- name: set oracle user environment
+  blockinfile:
+    dest: /home/{{ oracle_user }}/.bashrc
+    block: |
+      export ORACLE_BASE={{ ora_user_env.ORACLE_BASE }}
+      export ORACLE_SID={{ ora_user_env.ORACLE_SID }}
+      export ORACLE_HOME={{ ora_user_env.ORACLE_HOME }}
+      export PATH=$PATH:$ORACLE_HOME/bin
+      export NLS_LANG={{ ora_user_env.NLS_LANG }}
+
 - include: install_db.yml
   when: oracle_install_db
+
+- include: dbpatch.yml
+  when: oracle_install_db_patch
+
+- include: create_dbca_db.yml
+  when: oracle_create_dbca
 
 - include: dbms_time_update.yml
   when: oracle_install_time_update
 
-- name: start oracle
-  shell: /etc/init.d/oracle start
+- name: remove temporary dir {{ oracle_tmp }}
+  file: path={{ oracle_tmp }} state=absent

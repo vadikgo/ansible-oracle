@@ -1,0 +1,82 @@
+---
+- hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: load variables for test
+      include_vars: openstack-12.1.0.yml
+      no_log: yes
+    - name: Start server in sbt openstack
+      sbt_os_server:
+        vmname: "{{test_os_name}}"
+        state: present
+        project_name: CI_test
+        network_name: instance-net
+        image_name: RHEL-6.7.qcow2
+        flavor_name: m8.tiny
+        keyname: "{{lookup('env','OS_KEYNAME')}}"
+        validate_certs: no
+      register: new_vm
+
+    - name: add to group
+      add_host:
+        name: "{{test_os_name}}"
+        ansible_ssh_host: "{{new_vm.ip_address}}"
+        ansible_host: "{{new_vm.ip_address}}"
+        groups: openstack
+      no_log: yes
+
+- hosts: openstack
+  pre_tasks:
+    - name: load variables for test
+      include_vars: openstack-12.1.0.yml
+      no_log: yes
+    - name: remove public internet repo file
+      file: name=/etc/yum.repos.d/{{item}} state=absent
+      with_items:
+        - public-yum-ol6.repo
+        - aid.repo
+        - redhat.repo
+    - name: add local OEL repo
+      copy:
+        dest: /etc/yum.repos.d/localOEL67.repo
+        content: |
+          [localOEL67]
+          name=Local OEL67 repo
+          baseurl=http://10.116.99.190/files/OEL67
+          enabled=1
+          gpgcheck=1
+          gpgkey: http://10.116.99.190/files/OEL67/RPM-GPG-KEY
+    - name: ensure packages required are installed
+      yum: pkg={{item}} state=present
+      with_items:
+          - libselinux-python
+          - unzip
+          - tar
+          - sudo
+    - name: Disable requiretty
+      lineinfile:
+        dest: /etc/sudoers
+        regexp: '^Defaults\s+requiretty$'
+        state: absent
+    - name: Enable not requiretty
+      lineinfile:
+        dest: /etc/sudoers
+        line: "Defaults    !requiretty"
+    - name: add self ip to hosts
+      lineinfile:
+        dest: /etc/hosts
+        state: present
+        line: "{{ansible_default_ipv4.address}} {{ansible_hostname}} {{ansible_fqdn}}"
+  roles:
+    - ansible-oracle
+
+- hosts: localhost
+  gather_facts: no
+  connection: local
+  tasks:
+    - name: Delete server in sbt openstack
+      sbt_os_server:
+        vmname: "{{test_os_name}}"
+        state: absent
+        validate_certs: no

@@ -1,7 +1,7 @@
-- name: stop oracle
-  service: name=oracle state=stopped
-  with_items: "{{oracle_latest_patches}}"
-  when: ansible_connection != 'docker'
+#- name: stop oracle
+#  service: name=oracle state=stopped
+#  with_items: "{{oracle_latest_patches}}"
+#  when: not oracle_docker
 
 - name: create database
   become: yes
@@ -10,3 +10,31 @@
   command: "{{ ora_user_env.ORACLE_HOME }}/bin/dbca -silent -createDatabase -templateName General_Purpose.dbc -sid {{oracle_db_name}} -gdbName {{oracle_db_name}} -datafileDestination {{ ora_user_env.ORACLE_BASE }}/oradata -responseFile {{oracle_tmp}}/dbca.rsp -syspassword {{oracle_db_syspass}} -systempassword {{oracle_db_syspass}} -dbsnmppassword {{oracle_db_syspass}}"
   args:
     creates: "{{ ora_user_env.ORACLE_BASE }}/oradata/{{oracle_db_name}}"
+  register: create_res
+
+- block:
+    - name: start oracle
+      command: /etc/init.d/oracle start
+      changed_when: no
+
+    - name: compose the oracle user creation script
+      template:
+        src: sqlplus_user_setup.sh.j2
+        dest: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
+        owner: "{{ oracle_user }}"
+        group: "{{ oracle_group }}"
+        mode: 0755
+
+    - name: create the oracle db user
+      become: yes
+      become_user: "{{ oracle_user }}"
+      environment: "{{ora_user_env}}"
+      command: "{{ oracle_tmp }}/sqlplus_user_setup.sh"
+
+    - name: set oracle to autostart
+      lineinfile:
+        dest: /etc/oratab
+        state: present
+        regexp: "^{{ oracle_db_name }}"
+        line: "{{ oracle_db_name }}:{{ ora_user_env.ORACLE_HOME }}:Y"
+  when: create_res.changed

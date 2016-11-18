@@ -1,0 +1,65 @@
+variables:
+  DOCKER_HOST: tcp://10.116.146.75:2375
+  ORACLE_IMAGE: oracledb
+  ORACLE_DB_CONTAINER: oracle
+  ORACLE_DB_IMAGE: oracledb_db
+  OS_KEYNAME: opitr-234
+  OS_USERNAME: gorbunov-vv
+stages:
+  - lint
+  - build
+  - create_db
+
+image: docker.git
+
+lint:
+  stage: lint
+  script:
+    - cd tests
+    - ansible-lint *.yml
+  tags:
+    - ansible
+
+build_11:
+  stage: build
+  script:
+    - docker build -t ${ORACLE_IMAGE}:11.2 --shm-size=1GB -f Dockerfile11 .
+  tags:
+    - docker
+
+build_12:
+  stage: build
+  script:
+    - docker build -t ${ORACLE_IMAGE}:12.1 --shm-size=1GB -f Dockerfile12 .
+  tags:
+    - docker
+
+createdb_11:
+  stage: create_db
+  script:
+    - docker ps -f name=${ORACLE_DB_CONTAINER}-11 -q -a | xargs --no-run-if-empty docker rm -f
+    - docker run -t --privileged --shm-size 1GB --name ${ORACLE_DB_CONTAINER}-11 -h ${ORACLE_DB_CONTAINER}-11 --env "ORACLE_STOP=yes" ${ORACLE_IMAGE}:11.2
+    - docker commit ${ORACLE_DB_CONTAINER}-11 ${ORACLE_DB_IMAGE}:11.2
+    - docker rm ${ORACLE_DB_CONTAINER}-11
+  tags:
+    - docker
+
+createdb_12:
+  stage: create_db
+  script:
+    - docker ps -f name=${ORACLE_DB_CONTAINER}-12 -q -a | xargs --no-run-if-empty docker rm -f
+    - docker run -t --privileged --shm-size 1GB --name ${ORACLE_DB_CONTAINER}-12 -h ${ORACLE_DB_CONTAINER}-12 --env "ORACLE_STOP=yes" ${ORACLE_IMAGE}:12.1
+    - docker commit ${ORACLE_DB_CONTAINER}-12 ${ORACLE_DB_IMAGE}:12.1
+    - docker rm ${ORACLE_DB_CONTAINER}-12
+  tags:
+    - docker
+
+createdb_openstack:
+  stage: create_db
+  script:
+    - eval $(ssh-agent -s)
+    - ssh-add <(echo "$SSH_PRIVATE_KEY")
+    - cd tests
+    - ansible-playbook test_oracle_install_os.yml -e "test_os_name=oracle12-$CI_BUILD_REF_NAME"
+  tags:
+    - ansible

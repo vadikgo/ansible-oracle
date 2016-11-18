@@ -21,6 +21,7 @@
   become: yes
   become_user: "{{oracle_user}}"
   register: oracle_tz_version
+  changed_when: no
 
 - block:
     - name: Start Oracle TZ Update to version {{oracle_tz_version}}

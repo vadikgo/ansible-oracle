@@ -52,3 +52,31 @@ commented.
     oracle_opatch: opatch/p6880880_112000_Linux-x86-64.zip
     oracle_opatch_version: 11.2.0.3.12
 ```
+
+# Контейнеры Docker
+
+Gitlab CI создает образы **oracledb:11.2** и **oracledb:12.1**. Это предустановленный Oracle без создания БД.
+
+БД создается при старте контейнера, например:
+```
+docker run -t --privileged --shm-size 1GB --name oracle11 -h oracle11 oracledb:11.2
+```
+
+По-умолчанию имя создаваемой БД "db", пароль sysdba - "Oracle4dmin".
+
+При помощи переменных ORACLE_SID и ORACLE_SYSPASS можно задать имя создаваемой БД и пароль sysdba:
+```
+docker run -t --privileged --shm-size 1GB --name oracle11 -h oracle11 -e "ORACLE_SID=DB1" -e "ORACLE_SYSPASS=TopSecret123" oracledb:11.2
+```
+
+Если задать специальную переменную ORACLE_STOP, с непустым значением, то после создания БД сервер будет остановлен и контейнер остановится. Это необходимо, например, для дальнейшего сохранения состояния контейнера.
+```
+docker run -t --privileged --shm-size 1GB --name oracle11 -h oracle11 -e "ORACLE_STOP=yes" oracledb:11.2
+```
+
+Так-же, Gitlab CI создает контейнеры с уже созданной БД "db" и паролем sysdba "Oracle4dmin". Для запуска можно выполнить команды:
+
+```
+docker run --privileged --shm-size 1GB  -it oracledb_db:11.2 bash
+docker run --privileged --shm-size 1GB  -it oracledb_db:12.1 bash
+```
