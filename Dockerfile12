@@ -2,7 +2,7 @@
 #
 
 # pull base image
-FROM sbt-opir-246.ca.sbrf.ru:4567/opir/centos7-sbt-ansible
+FROM centos7-ansible
 
 COPY . /tmp/ansible-oracle
 RUN set -x \
